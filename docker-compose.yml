@@ -1,0 +1,68 @@
+services:
+  app:
+    image: ${APP_IMAGE:-docker.io/${DOCKERHUB_USER:-your-user}/mockup-api-server:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mockup-api-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: ${APP_PORT:-8080}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-mockupdb}
+      DB_USER: ${DB_USER:-mockuser}
+      DB_PASSWORD: ${DB_PASSWORD:-mockpass}
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:${DB_PORT:-3306}/${DB_NAME:-mockupdb}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_DRIVER: com.mysql.cj.jdbc.Driver
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-mockuser}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-mockpass}
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQLDialect
+      APP_OPEN_BROWSER_ON_START: "false"
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    networks:
+      - backend
+
+  db:
+    image: mysql:8.4
+    container_name: mockup-api-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-mockupdb}
+      MYSQL_USER: ${DB_USER:-mockuser}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-mockpass}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpass}
+    volumes:
+      - ${DB_DATA_PATH:-./.docker/mysql-data}:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - backend
+
+  db-admin:
+    image: phpmyadmin:5.2-apache
+    container_name: mockup-api-db-admin
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PMA_HOST: db
+      PMA_PORT: ${DB_PORT:-3306}
+      PMA_USER: ${DB_USER:-mockuser}
+      PMA_PASSWORD: ${DB_PASSWORD:-mockpass}
+      UPLOAD_LIMIT: 64M
+    ports:
+      - "${DB_ADMIN_PORT:-8082}:80"
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge

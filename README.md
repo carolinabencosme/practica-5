@@ -42,6 +42,46 @@ cd primera_practica
 
 Enable the development-only JWT helper by starting the app with the `dev` or `test` profile (for example `SPRING_PROFILES_ACTIVE=dev ./gradlew bootRun`). It exposes `GET /api/dev/jwt` to return a JWT for the currently authenticated user and is only active under those profiles. The UI only reveals the token on `/mocks/{id}` when the mock requires JWT and you press **Get JWT Token**.
 
+
+## 🐳 Docker & Docker Compose
+
+El proyecto incluye una configuración completa con Docker Compose para levantar:
+
+- **app**: aplicación Spring Boot
+- **db**: MySQL oficial (sin exponer puertos al host)
+- **db-admin**: phpMyAdmin para administración web de la base de datos
+
+### Variables de ambiente
+
+1. Copia el archivo de ejemplo:
+
+```bash
+cp .env.example .env
+```
+
+2. Ajusta los valores requeridos en `.env` (puertos, credenciales, ruta del volumen y nombre de imagen publicada en Docker Hub).
+
+### Levantar el escenario
+
+```bash
+docker compose up -d --build
+```
+
+- App: `http://localhost:${APP_PORT:-8080}`
+- phpMyAdmin: `http://localhost:${DB_ADMIN_PORT:-8082}`
+- La base de datos queda accesible **solo dentro de la red de Docker Compose**.
+
+### Publicación en Docker Hub
+
+Antes de desplegar en otro ambiente, publica la imagen de la app en Docker Hub:
+
+```bash
+docker build -t <tu-usuario-dockerhub>/mockup-api-server:latest .
+docker push <tu-usuario-dockerhub>/mockup-api-server:latest
+```
+
+Luego define `APP_IMAGE` en `.env` con esa imagen publicada.
+
 ## 🔑 Key Features
 
 - ✅ **Mock API Management** - Create and manage mock endpoints with custom responses
