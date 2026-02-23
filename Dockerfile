@@ -1,6 +1,10 @@
 FROM gradle:9.3-jdk25 AS build
 WORKDIR /workspace
-COPY . .
+COPY gradle gradle
+COPY gradlew gradlew
+COPY build.gradle settings.gradle ./
+RUN chmod +x gradlew
+COPY src src
 RUN ./gradlew clean bootJar --no-daemon
 
 FROM eclipse-temurin:25-jre
