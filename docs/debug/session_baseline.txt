@@ -1,0 +1,38 @@
+# DEBUG TRACE - BASELINE (BUG REPRO)
+# Objetivo: reproducir pérdida de sesión al cambiar de instancia detrás de HAProxy.
+
+===== BLOQUE 1: SET DE SESIÓN CON COOKIE (estado inicial) =====
+$ curl -k -i -c cookies.txt "https://localhost/session?value=sesion-ok"
+HTTP/2 200
+content-type: application/json
+set-cookie: SESSION=9f6cf4ab-2992-4e58-b9be-d9c414f9f76f; Path=/; Secure; HttpOnly; SameSite=Lax
+
+{"message":"session value set","sessionId":"9f6cf4ab-2992-4e58-b9be-d9c414f9f76f","value":"sesion-ok","instanceId":"app1"}
+
+===== BLOQUE 2: WHOAMI #1 (misma cookie, primera instancia) =====
+$ curl -k -i -b cookies.txt https://localhost/whoami
+HTTP/2 200
+content-type: application/json
+
+{"instanceId":"app1","hostname":"mockup-app1","serverPort":"8080","sessionId":"9f6cf4ab-2992-4e58-b9be-d9c414f9f76f","sessionValue":"sesion-ok"}
+
+===== BLOQUE 3: WHOAMI #2 (cambio de instancia, bug visible) =====
+$ curl -k -i -b cookies.txt https://localhost/whoami
+HTTP/2 200
+content-type: application/json
+set-cookie: SESSION=cc2c1409-9ad3-4fe6-a126-26e1191c685f; Path=/; Secure; HttpOnly; SameSite=Lax
+
+{"instanceId":"app2","hostname":"mockup-app2","serverPort":"8080","sessionId":"cc2c1409-9ad3-4fe6-a126-26e1191c685f","sessionValue":null}
+
+===== BLOQUE 4: WHOAMI #3 (otro cambio de instancia, nuevo ID de sesión) =====
+$ curl -k -i -b cookies.txt https://localhost/whoami
+HTTP/2 200
+content-type: application/json
+set-cookie: SESSION=8e82e6a8-f100-4f5c-9b2b-f95405dcb537; Path=/; Secure; HttpOnly; SameSite=Lax
+
+{"instanceId":"app3","hostname":"mockup-app3","serverPort":"8080","sessionId":"8e82e6a8-f100-4f5c-9b2b-f95405dcb537","sessionValue":null}
+
+===== EVIDENCIA CLAVE =====
+- Al cambiar de instancia, aparece Set-Cookie con SESSION nuevo.
+- sessionValue pasa a null en app2/app3.
+- sessionId deja de ser estable.
