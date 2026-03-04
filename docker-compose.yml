@@ -37,6 +37,8 @@ services:
       APP_OPEN_BROWSER_ON_START: "false"
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      SPRING_SESSION_STORE_TYPE: redis
+      SPRING_SESSION_NAMESPACE: mockup:sessions
       INSTANCE_ID: app1
     networks:
       - backend
