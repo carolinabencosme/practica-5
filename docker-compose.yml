@@ -43,6 +43,7 @@ services:
 
   app2:
     image: mockup-api-server:local
+    pull_policy: never
     container_name: mockup-app2
     depends_on:
       db:
@@ -57,6 +58,7 @@ services:
 
   app3:
     image: mockup-api-server:local
+    pull_policy: never
     container_name: mockup-app3
     depends_on:
       db:
