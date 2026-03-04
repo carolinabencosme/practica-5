@@ -1,0 +1,30 @@
+# REDIS CHECKS - AUDITORÍA DE CONECTIVIDAD
+# Fecha/hora (UTC): 2026-03-04T16:28:30+00:00
+# Contenedores objetivo: mockup-app1, mockup-app2, mockup-app3, mockup-redis
+
+## 1) Estado de contenedores (`docker compose ps`)
+$ docker compose ps
+bash: command not found: docker
+
+## 2) Logs de Redis (`docker compose logs --tail=100 redis`)
+$ docker compose logs --tail=100 redis
+bash: command not found: docker
+
+## 3) Resolución de host `redis` desde app1/app2/app3
+Comandos de referencia para ejecutar dentro de cada contenedor:
+- docker exec mockup-app1 getent hosts redis
+- docker exec mockup-app2 getent hosts redis
+- docker exec mockup-app3 getent hosts redis
+
+Intento local en este entorno (sin namespace de contenedores):
+$ getent hosts redis
+(sin salida)
+
+## 4) Verificación de ausencia de errores de conexión Redis en app1/app2/app3
+Comandos de referencia para auditoría:
+- docker logs mockup-app1 | rg -i "redis|connection|timeout|refused|error"
+- docker logs mockup-app2 | rg -i "redis|connection|timeout|refused|error"
+- docker logs mockup-app3 | rg -i "redis|connection|timeout|refused|error"
+
+Estado en este entorno:
+- No hay CLI de Docker/Compose disponible (`docker` y `docker-compose` no instalados), por lo que no se pueden extraer logs de los contenedores mockup-app1/mockup-app2/mockup-app3/mockup-redis desde aquí.
