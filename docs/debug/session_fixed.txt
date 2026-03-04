@@ -1,0 +1,38 @@
+# DEBUG TRACE - FIXED (VALIDACIÓN FINAL)
+# Objetivo: validar sesión distribuida consistente entre app1/app2/app3.
+
+===== BLOQUE 1: SET DE SESIÓN CON COOKIE =====
+$ curl -k -i -c cookies.txt "https://localhost/session?value=sesion-ok"
+HTTP/2 200
+content-type: application/json
+set-cookie: SESSION=5af868ff-4f32-4ee3-86a0-c5cc83888f8f; Path=/; Secure; HttpOnly; SameSite=Lax
+
+{"message":"session value set","sessionId":"5af868ff-4f32-4ee3-86a0-c5cc83888f8f","value":"sesion-ok","instanceId":"app1"}
+
+===== BLOQUE 2: MÚLTIPLES LLAMADAS /whoami CON LA MISMA COOKIE =====
+$ for i in 1 2 3 4 5 6; do curl -k -s -b cookies.txt https://localhost/whoami; echo; done
+{"instanceId":"app1","hostname":"mockup-app1","serverPort":"8080","sessionId":"5af868ff-4f32-4ee3-86a0-c5cc83888f8f","sessionValue":"sesion-ok"}
+{"instanceId":"app2","hostname":"mockup-app2","serverPort":"8080","sessionId":"5af868ff-4f32-4ee3-86a0-c5cc83888f8f","sessionValue":"sesion-ok"}
+{"instanceId":"app3","hostname":"mockup-app3","serverPort":"8080","sessionId":"5af868ff-4f32-4ee3-86a0-c5cc83888f8f","sessionValue":"sesion-ok"}
+{"instanceId":"app1","hostname":"mockup-app1","serverPort":"8080","sessionId":"5af868ff-4f32-4ee3-86a0-c5cc83888f8f","sessionValue":"sesion-ok"}
+{"instanceId":"app2","hostname":"mockup-app2","serverPort":"8080","sessionId":"5af868ff-4f32-4ee3-86a0-c5cc83888f8f","sessionValue":"sesion-ok"}
+{"instanceId":"app3","hostname":"mockup-app3","serverPort":"8080","sessionId":"5af868ff-4f32-4ee3-86a0-c5cc83888f8f","sessionValue":"sesion-ok"}
+
+===== BLOQUE 3: VERIFICACIÓN DE HEADERS (sin Set-Cookie nuevo por cambio de instancia) =====
+$ curl -k -i -b cookies.txt https://localhost/whoami
+HTTP/2 200
+content-type: application/json
+
+{"instanceId":"app2","hostname":"mockup-app2","serverPort":"8080","sessionId":"5af868ff-4f32-4ee3-86a0-c5cc83888f8f","sessionValue":"sesion-ok"}
+
+$ curl -k -i -b cookies.txt https://localhost/whoami
+HTTP/2 200
+content-type: application/json
+
+{"instanceId":"app3","hostname":"mockup-app3","serverPort":"8080","sessionId":"5af868ff-4f32-4ee3-86a0-c5cc83888f8f","sessionValue":"sesion-ok"}
+
+===== EVIDENCIA CLAVE =====
+- instanceId alterna entre app1/app2/app3.
+- sessionValue siempre "sesion-ok".
+- sessionId estable en todas las respuestas.
+- No aparece Set-Cookie nuevo al cambiar de instancia.
