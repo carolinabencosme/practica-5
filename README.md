@@ -117,3 +117,5 @@ Debe retornar `301` con `Location: https://...`.
 - prueba de redirección `80 -> 443`
 
 Detalles para reporte y video en `docs/REPORTE.md` y `docs/PRESENTACION_GUIA.md`.
+
+Además, tienes una guía operacional completa de validación en `docs/GUIA_PRUEBAS_PASO_A_PASO.md`.
