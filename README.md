@@ -1,127 +1,119 @@
-# Mockup API Server - Spring Boot
+# Práctica 5 - Balanceador de Carga con HAProxy + Sesiones Distribuidas
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.2-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![Java](https://img.shields.io/badge/Java-25-orange.svg)](https://www.oracle.com/java/)
-[![License](https://img.shields.io/badge/License-Academic-blue.svg)]()
+Esta implementación levanta un entorno de alta disponibilidad para la aplicación Spring Boot usando Docker Compose:
 
-Un servidor de APIs simuladas (mockup) desarrollado con Spring Boot para la práctica universitaria del curso de Programación Web Avanzada (ICC-354) de la Pontificia Universidad Católica Madre y Maestra.
+- **HAProxy** como balanceador con **Round Robin**
+- **Terminación TLS/SSL** en HAProxy
+- **Redirección HTTP (80) -> HTTPS (443)**
+- **3 instancias de la app** (`app1`, `app2`, `app3`)
+- **Redis** para sesiones distribuidas con Spring Session
+- **MySQL** para persistencia de datos de la app
 
-A powerful Spring Boot-based application for creating, managing, and executing mock API endpoints.
+## Estructura
 
-## 📚 Documentation
-
-Comprehensive documentation is available in the [doc/](doc/) directory:
-
-| Document | Description |
-|----------|-------------|
-| **[README.md](doc/README.md)** | Project overview, features, installation, and quick start guide |
-| **[ARCHITECTURE.md](doc/ARCHITECTURE.md)** | System architecture, design patterns, and technical decisions |
-| **[DATABASE.md](doc/DATABASE.md)** | Database schema, entities, relationships, and queries |
-| **[API.md](doc/API.md)** | REST API reference with request/response examples |
-| **[USER_GUIDE.md](doc/USER_GUIDE.md)** | Step-by-step user guide with FAQ and troubleshooting |
-| **[SECURITY.md](doc/SECURITY.md)** | Security implementation, JWT, and best practices |
-| **[TESTING.md](doc/TESTING.md)** | Testing strategy, test types, and guidelines |
-| **[DEPLOYMENT.md](doc/DEPLOYMENT.md)** | Production deployment guide and configuration |
-| **[CHANGELOG.md](doc/CHANGELOG.md)** | Version history and release notes |
-
-## 🚀 Quick Start
-
-```bash
-# Clone repository
-git clone <repository-url>
-cd primera_practica
-
-# Run application
-./gradlew bootRun
-
-# Access at http://localhost:8080
-# Login: admin / admin
+```text
+.
+├── docker-compose.yml
+├── Dockerfile
+├── haproxy/
+│   ├── haproxy.cfg
+│   └── certs/
+│       ├── fullchain.pem
+│       ├── privkey.pem
+│       └── haproxy.pem
+├── docs/
+│   ├── REPORTE.md
+│   └── PRESENTACION_GUIA.md
+└── src/
 ```
 
-**Dev/Test token endpoint**
-
-Enable the development-only JWT helper by starting the app with the `dev` or `test` profile (for example `SPRING_PROFILES_ACTIVE=dev ./gradlew bootRun`). It exposes `GET /api/dev/jwt` to return a JWT for the currently authenticated user and is only active under those profiles. The UI only reveals the token on `/mocks/{id}` when the mock requires JWT and you press **Get JWT Token**.
-
-
-## 🐳 Docker & Docker Compose
-
-El proyecto incluye una configuración completa con Docker Compose para levantar:
-
-- **app**: aplicación Spring Boot
-- **db**: MySQL oficial (sin exponer puertos al host)
-- **db-admin**: phpMyAdmin para administración web de la base de datos
-
-### Variables de ambiente
-
-1. Copia el archivo de ejemplo:
-
-```bash
-cp .env.example .env
-```
-
-2. Ajusta los valores requeridos en `.env` (puertos, credenciales, ruta del volumen y nombre de imagen publicada en Docker Hub).
-
-### Levantar el escenario
+## Despliegue rápido
 
 ```bash
 docker compose up -d --build
 ```
 
-- App: `http://localhost:${APP_PORT:-8080}`
-- phpMyAdmin: `http://localhost:${DB_ADMIN_PORT:-8082}`
-- La base de datos queda accesible **solo dentro de la red de Docker Compose**.
+Servicios expuestos:
 
-### Publicación en Docker Hub
+- `https://localhost` (acceso principal)
+- `http://localhost` (redirige a HTTPS)
+- `http://localhost:8404/stats` (estadísticas de HAProxy)
 
-Antes de desplegar en otro ambiente, publica la imagen de la app en Docker Hub:
+> Nota: para desarrollo local se usa certificado **self-signed** (`haproxy/certs/haproxy.pem`).
+
+## Endpoints de validación
+
+- `GET /whoami` -> retorna `instanceId`, `hostname`, `serverPort`, `sessionId`, `sessionValue`
+- `GET /session?value=demo123` -> guarda un valor en sesión distribuida (Redis)
+- `GET /actuator/health` -> endpoint de health check para HAProxy
+
+## Pruebas requeridas
+
+### 1) Round Robin
 
 ```bash
-docker build -t <tu-usuario-dockerhub>/mockup-api-server:latest .
-docker push <tu-usuario-dockerhub>/mockup-api-server:latest
+for i in {1..10}; do curl -k https://localhost/whoami; echo; done
 ```
 
-Luego define `APP_IMAGE` en `.env` con esa imagen publicada.
+Debe alternar entre `app1`, `app2`, `app3`.
 
-## 🔑 Key Features
+### 2) Sesión distribuida
 
-- ✅ **Mock API Management** - Create and manage mock endpoints with custom responses
-- ✅ **JWT Authentication** - Optional JWT protection for mock endpoints  
-- ✅ **Response Configuration** - Custom status codes, headers, delays, and expiration
-- ✅ **User Management** - Role-based access control (Admin/User)
-- ✅ **Project Organization** - Group endpoints by projects
-- ✅ **Web Interface** - Intuitive Bootstrap 5 UI for CRUD operations
-- ✅ **Dynamic Execution** - REST API for executing mock endpoints
-- ✅ **Internationalization** - Spanish and English support (i18n)
-- ✅ **H2 Database** - In-memory database with console access
-- ✅ **Complete Documentation** - 9 comprehensive documents
+1. Guardar sesión:
+   ```bash
+   curl -k -c cookies.txt "https://localhost/session?value=sesion-activa"
+   ```
+2. Consultar varias veces con la misma cookie:
+   ```bash
+   for i in {1..6}; do curl -k -b cookies.txt https://localhost/whoami; echo; done
+   ```
 
-## 📖 Documentation Guide
+Debe cambiar `instanceId`, pero mantener `sessionValue=sesion-activa` y el mismo estado de sesión.
 
-**New to the project?** Start with [doc/README.md](doc/README.md)
+### 3) Failover
 
-**Want to understand the architecture?** Read [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md)
+```bash
+docker stop mockup-app2
+for i in {1..8}; do curl -k https://localhost/whoami; echo; done
+```
 
-**Need to deploy?** Follow [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md)
+Las respuestas deben continuar desde `app1` y `app3`, sin errores 502.
 
-**Looking for API reference?** Check [doc/API.md](doc/API.md)
+### 4) Redirect HTTP -> HTTPS
 
-**End user?** See [doc/USER_GUIDE.md](doc/USER_GUIDE.md)
+```bash
+curl -I http://localhost
+```
 
-## 🛠️ Technology Stack
+Debe retornar `301` con `Location: https://...`.
 
-- **Spring Boot 4.0.2** - Application framework
-- **Java 25** - Programming language
-- **Spring Security 6.4** - Authentication and authorization
-- **JWT (JJWT 0.12.6)** - Token-based authentication
-- **JPA/Hibernate 7.2** - ORM persistence
-- **H2 Database 2.4** - In-memory database
-- **Thymeleaf 3.1** - Template engine
-- **Bootstrap 5.3** - CSS framework
-- **Lombok** - Boilerplate reduction
-- **Gradle 9.3** - Build tool
+## Certificados en VM con Let's Encrypt (producción)
 
-## 📄 License
+1. Apuntar DNS tipo A al IP público de la VM.
+2. Instalar Certbot en la VM.
+3. Emitir certificado:
+   ```bash
+   sudo certbot certonly --standalone -d app.mi-host-asignado
+   ```
+4. Generar PEM para HAProxy:
+   ```bash
+   sudo cat /etc/letsencrypt/live/app.mi-host-asignado/fullchain.pem \
+            /etc/letsencrypt/live/app.mi-host-asignado/privkey.pem \
+            > haproxy/certs/haproxy.pem
+   ```
+5. Reemplazar también `fullchain.pem` y `privkey.pem` en `haproxy/certs/`.
+6. Reiniciar HAProxy:
+   ```bash
+   docker compose restart haproxy
+   ```
 
-Este proyecto es una práctica académica para la Pontificia Universidad Católica Madre y Maestra (PUCMM).
+## Evidencia sugerida para entrega
 
-**Desarrollado con ❤️ como proyecto académico**
+- `docker compose ps`
+- `docker compose logs haproxy`
+- prueba de `whoami` alternando instancias
+- prueba de sesión distribuida con cookies
+- prueba de failover (`docker stop mockup-app2`)
+- prueba de redirección `80 -> 443`
+
+Detalles para reporte y video en `docs/REPORTE.md` y `docs/PRESENTACION_GUIA.md`.
