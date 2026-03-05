@@ -1,0 +1,6 @@
+# Ejecutar con el entorno levantado (antes del fix) y pegar aquí la salida:
+#
+# curl.exe -sk -c cookies.txt "https://localhost/session?value=sesion-ok"
+# 1..8 | ForEach-Object { curl.exe -sk -b cookies.txt "https://localhost/whoami"; "" }
+#
+# (Placeholder: reemplazar con output real si se captura baseline)

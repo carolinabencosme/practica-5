@@ -1,0 +1,9 @@
+# Ejecutar y pegar aquí la salida (antes del fix):
+#
+# 1..8 | ForEach-Object {
+#   curl.exe -vk -b cookies.txt https://localhost/whoami 2>&1 |
+#     Select-String "instanceId|set-cookie|Cookie:|sessionValue|sessionId"
+#   "----"
+# }
+#
+# (Placeholder: reemplazar con output real si se captura baseline)
