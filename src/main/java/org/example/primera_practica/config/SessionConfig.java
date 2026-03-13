@@ -4,12 +4,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.session.data.redis.config.annotation.web.http.EnableRedisHttpSession;
 
 /**
- * Fuerza el uso de Redis como almacén de sesiones HTTP.
- * Sin esta anotación, Spring Session puede no registrar el SessionRepository
- * y las instancias usan sesión en memoria, por lo que Redis queda vacío
- * y cada app emite su propia JSESSIONID (set-cookie) al no encontrar la sesión.
+ * Fuerza el uso de Redis como almacén de sesiones HTTP y fija el namespace esperado
+ * para que las claves aparezcan como mockup:sessions* en Redis.
  */
 @Configuration
-@EnableRedisHttpSession
+@EnableRedisHttpSession(redisNamespace = "mockup:sessions")
 public class SessionConfig {
 }
