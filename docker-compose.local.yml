@@ -1,0 +1,11 @@
+# Solo para ejecutar en tu PC cuando el puerto 80 está ocupado.
+# Uso: docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+# Luego abre http://localhost:8080 y https://localhost:8443
+# En el servidor EC2 usa solo: docker compose up -d (sin este archivo)
+
+services:
+  haproxy:
+    ports:
+      - "8080:80"
+      - "8443:443"
+      - "8404:8404"
