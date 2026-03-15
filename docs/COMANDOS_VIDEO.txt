@@ -1,0 +1,79 @@
+================================================================================
+  COMANDOS COMPLETOS - DESPLIEGUE PRACTICA-5 EN EC2 (para video)
+  Dominio: mocky-up.viewdns.net  |  Sustituir IP por la de tu instancia EC2
+================================================================================
+
+--- EN AWS (consola) ---
+  • Security Group: abrir puertos 22, 80, 443 (origen 0.0.0.0/0 para 80 y 443)
+  • Opcional: Storage → Modificar volumen → 25–30 GB
+
+--- EN TU PC (PowerShell) - Sustituir 3.89.206.51 por tu IP pública ---
+
+  icacls "C:\Users\Josvier\Desktop\practica-5\key.pem" /inheritance:r /grant:r "${env:USERNAME}:R"
+
+  cd C:\Users\Josvier\Desktop\practica-5
+  ssh -i key.pem ubuntu@3.89.206.51
+
+--- EN EL SERVIDOR (ya conectado por SSH) - Instalar Docker ---
+
+  sudo apt update && sudo apt install -y ca-certificates curl
+  sudo install -m 0755 -d /etc/apt/keyrings
+  sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  sudo chmod a+r /etc/apt/keyrings/docker.asc
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  sudo apt update && sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  sudo usermod -aG docker ubuntu
+
+  exit
+
+--- EN TU PC - Reconectar por SSH ---
+
+  ssh -i key.pem ubuntu@3.89.206.51
+
+--- EN EL SERVIDOR - Crear carpeta del proyecto ---
+
+  mkdir -p ~/practica-5
+
+--- EN TU PC - Subir proyecto (ejecutar desde C:\Users\Josvier\Desktop\practica-5) ---
+
+  scp -i key.pem -r docker-compose.yml Dockerfile .dockerignore build.gradle settings.gradle gradlew gradlew.bat haproxy gradle src doc docs ubuntu@3.89.206.51:~/practica-5/
+
+--- EN EL SERVIDOR - Levantar aplicación ---
+
+  cd ~/practica-5
+  docker compose up -d --build
+
+  (esperar a que termine el build)
+
+--- EN EL SERVIDOR - Si HAProxy no arranca (permisos del certificado) ---
+
+  chmod 755 ~/practica-5/haproxy/certs
+  chmod 644 ~/practica-5/haproxy/certs/haproxy.pem
+  docker compose up -d haproxy
+
+--- EN EL SERVIDOR - Comprobar que todo está Up ---
+
+  docker compose ps
+
+  (deben aparecer: mockup-haproxy, mockup-app1, mockup-app2, mockup-app3, mockup-mysql, mockup-redis)
+
+--- OPCIONAL - Certificado Let's Encrypt (quitar "Not secure") ---
+
+  sudo apt update && sudo apt install -y certbot
+  cd ~/practica-5
+  docker compose stop haproxy
+  sudo certbot certonly --standalone -d mocky-up.viewdns.net --non-interactive --agree-tos -m tu@email.com
+  sudo cat /etc/letsencrypt/live/mocky-up.viewdns.net/fullchain.pem /etc/letsencrypt/live/mocky-up.viewdns.net/privkey.pem | sudo tee ~/practica-5/haproxy/certs/haproxy.pem > /dev/null
+  sudo chmod 644 ~/practica-5/haproxy/certs/haproxy.pem
+  docker compose start haproxy
+
+--- PRUEBAS EN EL NAVEGADOR ---
+
+  http://3.89.206.51
+  https://3.89.206.51/whoami
+  http://mocky-up.viewdns.net
+  https://mocky-up.viewdns.net/whoami
+
+================================================================================
+  FIN - Sustituir 3.89.206.51 por la IP pública de tu instancia EC2
+================================================================================

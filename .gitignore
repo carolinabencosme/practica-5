@@ -35,3 +35,8 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### SSH / keys (no subir al repo) ###
+*.pem
+key.pem
+key2.pem
